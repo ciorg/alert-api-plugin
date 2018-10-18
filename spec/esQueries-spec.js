@@ -9,7 +9,7 @@ let indexQuery;
 
 const context = {
     sysconfig: {
-        teranaut: {
+        teraserver: {
             connection: 'default'
         }
     },

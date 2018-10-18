@@ -7,7 +7,7 @@ let searchResult;
 
 const context = {
     sysconfig: {
-        teranaut: {
+        teraserver: {
             connection: 'default'
         }
     },
