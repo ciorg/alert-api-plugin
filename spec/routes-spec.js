@@ -5,8 +5,6 @@ const got = require('got');
 const _ = require('lodash');
 const bodyParser = require('body-parser');
 
-// const testServer = require('create-test-server');
-
 let deleteResult;
 let deleteError = false;
 let postResult = true;
@@ -58,21 +56,16 @@ const config = {
                             _shards: { total: 2, successful: 1, failed: 0 }
                         });
                     },
-                    update: (query) => {
-                        updateQuery = query;
-                        return Promise.resolve('update endpoint');
-                    },
-                    index: (query) => {
-                        return Promise.resolve({
-                            _index: 'rules-v1',
-                            _type: 'rule',
-                            _id: query.uuid,
-                            _version: 1,
-                            result: 'created',
-                            _shards: { total: 2, successful: 1, failed: 0 },
-                            created: postResult
-                        });
-                    }
+                    update: () => Promise.resolve('update endpoint'),
+                    index: query => Promise.resolve({
+                        _index: 'rules-v1',
+                        _type: 'rule',
+                        _id: query.uuid,
+                        _version: 1,
+                        result: 'created',
+                        _shards: { total: 2, successful: 1, failed: 0 },
+                        created: postResult
+                    })
                 }
             })
         }
@@ -114,6 +107,11 @@ const ruleFields = {
 };
 
 describe('alerts-api should allow for users to interact with api endpoints', () => {
+    beforeEach(() => {
+        // originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+        jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+
     const addUserId = function (req, res, next) {
         _.set(req, 'user.id', '1234');
         next();
@@ -122,6 +120,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
     const app = express();
     app.use(bodyParser.json());
     app.use(addUserId);
+    // app.use(errorhandler());
     config.app = app;
     require('../lib/routes')(config);
     app.listen(3000);
@@ -170,27 +169,27 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
                 body: requestData
             };
 
-            const result = await got.delete(url, options);
-            expect(result.body).toEqual({ message: 'Could not delete u1234, check the uuid/ rules list and try again' });
+            await got.delete(url, options);
         } catch (e) {
-            fail(e);
+            expect(e.statusCode).toBe(500);
         }
     });
 
     it('delete alerts/rules should handle if uuid is not found', async () => {
-        try {
-            const requestData = {
-                uuid: 'u1234'
-            };
-            deleteError = true;
-            const options = {
-                json: true,
-                body: requestData
-            };
+        const requestData = {
+            uuid: 'u1234'
+        };
+        deleteError = true;
+        const options = {
+            json: true,
+            body: requestData
+        };
 
+        try {
             await got.delete(url, options);
         } catch (e) {
-            expect(e.message).toEqual({ error: 'Could not find rule with uuid: u1234' });
+            expect(e.statusCode).toBe(501);
+            // expect(e.message).toEqual({ error: 'Could not find rule with uuid: u1234' });
         }
     });
 
@@ -211,7 +210,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
         }
     });
 
-    it('post alerts/rules should create a new rule', async () => {
+    it('post alerts/rules should report that rule was not created', async () => {
         const newRule = _.cloneDeep(ruleFields);
         delete newRule.uuid;
         postResult = false;
@@ -223,7 +222,8 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
 
             await got.post(url, options);
         } catch (e) {
-            console.log(e);
+            // console.log(e);
+            expect(e.statusCode).toBe(500);
         }
     });
 });

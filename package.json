@@ -23,7 +23,7 @@
     ]
   },
   "devDependencies": {
-    "create-test-server": "^2.4.0",
+    "errorhandler": "^1.5.0",
     "eslint": "^4.19.0",
     "eslint-config-airbnb": "^16.1.0",
     "eslint-plugin-import": "^2.9.0",
