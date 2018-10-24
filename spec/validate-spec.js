@@ -150,46 +150,6 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if spaces is not definded', async () => {
-        searchResult = {
-            hits: {
-                total: 0
-            }
-        };
-
-        const testFields = _.cloneDeep(fields);
-        delete testFields.spaces;
-
-        try {
-            const result = await validate.validateRule(testFields, true);
-            expect(result.isValid).toBe(false);
-            expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('Please assign a space to the rule');
-        } catch (e) {
-            fail(e);
-        }
-    });
-
-    it('should mark rule invalid if spaces is not definded', async () => {
-        searchResult = {
-            hits: {
-                total: 0
-            }
-        };
-
-        const testFields = _.cloneDeep(fields);
-        delete testFields.spaces;
-
-        try {
-            const result = await validate.validateRule(testFields, true);
-            expect(result.isValid).toBe(false);
-            expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('Please assign a space to the rule');
-        } catch (e) {
-            fail(e);
-        }
-    });
-
     it('should mark rule invalid if name is not uniq or undefined', async () => {
         searchResult = {
             hits: {

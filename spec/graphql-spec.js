@@ -10,12 +10,15 @@ const bodyParser = require('body-parser');
 const rules = require('./fixtures/rules');
 
 const user = '1';
+let searchQuery;
+let searchResponse;
+let indexQuery;
 
-function fullESResponse(data, index, type) {
+function fullESResponse(data) {
     const hitsArray = data.map((i) => {
         const esItem = {
-            _index: index,
-            _type: type,
+            _index: 'rules-v1',
+            _type: 'rule',
             _id: i.uuid,
             _source: i
         };
@@ -43,24 +46,24 @@ const config = {
             getConnection: () => ({
                 client: {
                     search: (query) => {
-                        const { index } = query;
-                        const { type } = query;
-                        const fullEs = fullESResponse(rules, index, type);
-                        fullEs.hits.hits = fullEs.hits.hits
-                            .filter(rule => rule._source.user_id === user);
-                        return Promise.resolve(fullEs);
+                        searchQuery = query;
+                        return Promise.resolve(searchResponse);
                     },
                     delete: () => Promise.resolve('delete endpoint'),
                     update: () => Promise.resolve('update endpoint'),
-                    index: query => Promise.resolve({
-                        _index: 'rules-v1',
-                        _type: 'rule',
-                        _id: query.uuid,
-                        _version: 1,
-                        result: 'created',
-                        _shards: { total: 2, successful: 1, failed: 0 },
-                        created: true
-                    })
+                    index: (query) => {
+                        indexQuery = query;
+                        const indexResponse = {
+                            _index: 'rules-v1',
+                            _type: 'rule',
+                            _id: indexQuery.id,
+                            _version: 1,
+                            result: 'created',
+                            _shards: { total: 2, successful: 1, failed: 0 },
+                            created: true
+                        };
+                        return Promise.resolve(indexResponse);
+                    }
                 }
             })
         }
@@ -104,12 +107,24 @@ function killServer() {
 
 describe('alerts-api should allow for users to interact with rule data', () => {
     startServer();
-    // afterAll(() => killServer());
+    afterAll(() => killServer());
     const url = 'http://localhost:3000/api/v1/alerts-graphql';
 
-    fit('should return all rules associated with a user', async () => {
+    fit('should return all the logged in users rules', async () => {
+        searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules {name}}'
+            query: 'query getRules {' +
+                'getRules {' +
+                    'uuid\n' +
+                    'name\n' +
+                    'watch_type\n' +
+                    'criteria\n' +
+                    'actions {\n' +
+                        'action_type\n' +
+                        'url\n' +
+                        'to}' +
+                '}' +
+            '}'
         };
         const options = {
             json: true,
@@ -120,48 +135,67 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(result.body.data.getRules.length).toBe(4);
     });
 
-    fit('should filter rules by arguments, only watchType expression', async () => {
+    fit('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
+        searchResponse = fullESResponse(rules);
         const requestData = {
             query: 'query getRules {getRules(watchType:EXPRESSION) {' +
-                'name\n' +
-                'watch_type' +
-            '}' +
-        '}'
+                    'name\n' +
+                    'watch_type' +
+                '}' +
+            '}'
         };
         const options = {
             json: true,
             body: requestData
         };
 
-        const result = await got.post(url, options);
-        const queryData = result.body.data.getRules;
-        expect(queryData.length).toBe(1);
-        expect(queryData[0].watch_type).toBe('EXPRESSION');
+        await got.post(url, options);
+        expect(searchQuery.q).toEqual('user_id: 1 AND watch_type: EXPRESSION');
     });
 
-    fit('should filter rules by arguments, only email actions', async () => {
+    fit('should create proper es search for rules with specific action_types', async () => {
+        searchResponse = fullESResponse(rules);
         const requestData = {
             query: 'query getRules {getRules(actionType:EMAIL) {' +
-            'name\n' +
-            'actions {' +
-                'action_type }' +
-        '}' +
-    '}'
+                'name\n' +
+                'actions {' +
+                    'action_type }' +
+                '}' +
+            '}'
         };
         const options = {
             json: true,
             body: requestData
         };
 
-        const result = await got.post(url, options);
-        expect(result.body.data.getRules.length).toBe(3);
-        expect(result.body.data.getRules[0].actions[0].action_type).toBe('EMAIL');
-        expect(result.body.data.getRules[1].actions[0].action_type).toBe('EMAIL');
+        await got.post(url, options);
+        expect(searchQuery.q).toEqual('user_id: 1 AND actions.action_type: EMAIL');
     });
 
-    fit('should filter rules by arguments, watchType: fieldmatch, actionType: webook', async () => {
+    fit('should create search for rules with specific id', async () => {
+        searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules(watchType: FIELDMATCH, actionType:WEBHOOK) {' +
+            query: 'query getRules {getRules(id:1) {' +
+                'name\n' +
+                'watch_type\n' +
+                'actions {' +
+                    'action_type }' +
+                '}' +
+            '}'
+        };
+        const options = {
+            json: true,
+            body: requestData
+        };
+
+        await got.post(url, options);
+        expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1');
+    });
+
+    fit('should create search for rules with many specific limiters', async () => {
+        searchResponse = fullESResponse(rules);
+        const requestData = {
+            query: 'query getRules {getRules(id:1, watchType:FIELDMATCH, actionType:WEBHOOK) {' +
             'name\n' +
             'watch_type\n' +
             'actions {' +
@@ -174,15 +208,66 @@ describe('alerts-api should allow for users to interact with rule data', () => {
             body: requestData
         };
 
-        const result = await got.post(url, options);
-        expect(result.body.data.getRules.length).toBe(2);
-        expect(result.body.data.getRules[0].watch_type).toBe('FIELDMATCH');
-        expect(result.body.data.getRules[0].actions[1].action_type).toBe('WEBHOOK');
-        expect(result.body.data.getRules[0].actions.length).toBe(2);
-        expect(result.body.data.getRules[1].actions[0].action_type).toBe('WEBHOOK');
+        await got.post(url, options);
+        expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1 AND watch_type: FIELDMATCH AND actions.action_type: WEBHOOK');
     });
 
-    fit('should create new rules for a user', () => {
-
+    fit('should create new rules for a user', async () => {
+        const requestData = {
+            query: 'mutation addRule { ' +
+                'addRule (' +
+                    'name: "MyRule",' +
+                    'watch_type: EXPRESSION,' +
+                    'spaces: "space1"' +
+                    'criteria: "ip: 1234",' +
+                    'actions: {\n' +
+                        'action_type: EMAIL\n' +
+                        'to: ["joe@joe.com", "bob@bob.com"]\n' +
+                        'from: "joe@joe.com"\n' +
+                        'subject: "my subject"\n' +
+                    '}' +
+                ')' +
+                '{' +
+                    'uuid\n' +
+                    'success\n' +
+                    'message' +
+                '}' +
+            '}'
+        };
+        const options = {
+            json: true,
+            body: requestData
+        };
+        const response = await got.post(url, options);
+        // es index query should reflect whats in the graphql addRull query
+        expect(indexQuery).toEqual({
+            index: 'rules-v1',
+            type: 'rule',
+            id: indexQuery.id,
+            body: {
+                name: 'MyRule',
+                spaces: 'space1',
+                watch_type: 'EXPRESSION',
+                criteria: 'ip: 1234',
+                actions: [
+                    {
+                        action_type: 'EMAIL',
+                        to: ['joe@joe.com', 'bob@bob.com'],
+                        from: 'joe@joe.com',
+                        subject: 'my subject'
+                    }
+                ],
+                user_id: '1',
+                include_record: false,
+                record_fields: [],
+                uuid: indexQuery.id
+            }
+        });
+        // check response
+        expect(response.body.data.addRule).toEqual({
+            uuid: indexQuery.id,
+            success: true,
+            message: 'New rule was created'
+        });
     });
 });
