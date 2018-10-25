@@ -15,13 +15,15 @@ let searchResponse;
 let indexQuery;
 
 function fullESResponse(data) {
+    let id = 1;
     const hitsArray = data.map((i) => {
         const esItem = {
             _index: 'rules-v1',
             _type: 'rule',
-            _id: i.uuid,
+            _id: id,
             _source: i
         };
+        id += 1;
         return esItem;
     });
 
@@ -107,24 +109,23 @@ function killServer() {
 
 describe('alerts-api should allow for users to interact with rule data', () => {
     startServer();
-    afterAll(() => killServer());
+    // afterAll(() => killServer());
     const url = 'http://localhost:3000/api/v1/alerts-graphql';
 
-    fit('should return all the logged in users rules', async () => {
+    it('should return all the logged in users rules', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {' +
-                'getRules {' +
-                    'uuid\n' +
-                    'name\n' +
-                    'watch_type\n' +
-                    'criteria\n' +
-                    'actions {\n' +
-                        'action_type\n' +
-                        'url\n' +
-                        'to}' +
-                '}' +
-            '}'
+            query: `query getRules {
+                getRules {
+                    id
+                    name
+                    watch_type
+                    actions{
+                        action_type
+                        message
+                    }
+                }
+            }`
         };
         const options = {
             json: true,
@@ -135,14 +136,14 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(result.body.data.getRules.length).toBe(4);
     });
 
-    fit('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
+    it('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules(watchType:EXPRESSION) {' +
-                    'name\n' +
-                    'watch_type' +
-                '}' +
-            '}'
+            query: `query getRules {getRules(watchType:EXPRESSION) {
+                    name
+                    watch_type
+                }
+            }`
         };
         const options = {
             json: true,
@@ -153,15 +154,15 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND watch_type: EXPRESSION');
     });
 
-    fit('should create proper es search for rules with specific action_types', async () => {
+    it('should create proper es search for rules with specific action_types', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules(actionType:EMAIL) {' +
-                'name\n' +
-                'actions {' +
-                    'action_type }' +
-                '}' +
-            '}'
+            query: `query getRules {getRules(actionType:EMAIL) {
+                name
+                actions {
+                    action_type }
+                }
+            }`
         };
         const options = {
             json: true,
@@ -172,16 +173,16 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND actions.action_type: EMAIL');
     });
 
-    fit('should create search for rules with specific id', async () => {
+    it('should create search for rules with specific id', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules(id:1) {' +
-                'name\n' +
-                'watch_type\n' +
-                'actions {' +
-                    'action_type }' +
-                '}' +
-            '}'
+            query: `query getRules {getRules(id:1) {
+                name
+                watch_type
+                actions {
+                    action_type }
+                }
+            }`
         };
         const options = {
             json: true,
@@ -192,16 +193,16 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1');
     });
 
-    fit('should create search for rules with many specific limiters', async () => {
+    it('should create search for rules with many specific limiters', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
-            query: 'query getRules {getRules(id:1, watchType:FIELDMATCH, actionType:WEBHOOK) {' +
-            'name\n' +
-            'watch_type\n' +
-            'actions {' +
-                'action_type }' +
-        '}' +
-    '}'
+            query: `query getRules {getRules(id:1, watchType:FIELDMATCH, actionType:WEBHOOK) {
+                name
+                watch_type
+                actions {
+                    action_type }
+                }
+            }`
         };
         const options = {
             json: true,
@@ -212,27 +213,27 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1 AND watch_type: FIELDMATCH AND actions.action_type: WEBHOOK');
     });
 
-    fit('should create new rules for a user', async () => {
+    it('should create new rules for a user', async () => {
         const requestData = {
-            query: 'mutation addRule { ' +
-                'addRule (' +
-                    'name: "MyRule",' +
-                    'watch_type: EXPRESSION,' +
-                    'spaces: "space1"' +
-                    'criteria: "ip: 1234",' +
-                    'actions: {\n' +
-                        'action_type: EMAIL\n' +
-                        'to: ["joe@joe.com", "bob@bob.com"]\n' +
-                        'from: "joe@joe.com"\n' +
-                        'subject: "my subject"\n' +
-                    '}' +
-                ')' +
-                '{' +
-                    'uuid\n' +
-                    'success\n' +
-                    'message' +
-                '}' +
-            '}'
+            query: `mutation addRule { 
+                addRule (
+                    name: "MyRule",
+                    watch_type: EXPRESSION,
+                    spaces: "space1"
+                    criteria: "ip: 1234",
+                    actions: {
+                        action_type: EMAIL
+                        to: ["joe@joe.com", "bob@bob.com"]
+                        from: "joe@joe.com"
+                        subject: "my subject"
+                    }
+                )
+                {
+                    id
+                    success
+                    message
+                }
+            }`
         };
         const options = {
             json: true,
@@ -259,13 +260,12 @@ describe('alerts-api should allow for users to interact with rule data', () => {
                 ],
                 user_id: '1',
                 include_record: false,
-                record_fields: [],
-                uuid: indexQuery.id
+                record_fields: []
             }
         });
         // check response
         expect(response.body.data.addRule).toEqual({
-            uuid: indexQuery.id,
+            id: indexQuery.id,
             success: true,
             message: 'New rule was created'
         });

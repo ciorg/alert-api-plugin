@@ -3,7 +3,6 @@
         "name": "rule1",
         "user_id": "1",
         "watch_type": "EXPRESSION",
-        "uuid": "12346789",
         "criteria": "ip:1.1.1.1 AND domain: yourdomain.com",
         "actions": [
             {
@@ -26,7 +25,6 @@
         "name": "rule2",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
-        "uuid": "12346789",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
         "actions": [
             {
@@ -49,7 +47,6 @@
         "name": "rule3",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
-        "uuid": "12346789",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
         "actions": [
             {
@@ -64,7 +61,6 @@
         "name": "rule4",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
-        "uuid": "12346789",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
         "actions": [
             {
