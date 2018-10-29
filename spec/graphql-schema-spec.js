@@ -24,6 +24,7 @@ addMockFunctionsToSchema({
         Rule: () => ({
             actions: () => new MockList([1, 10])
         }),
+        Query: () => new MockList(1),
         Action: () => ({
             action_type: 'EMAIL',
             subject: 'This is a subject',
@@ -32,24 +33,39 @@ addMockFunctionsToSchema({
     }
 });
 
-const query = `
-    query getRules {
-        getRules {
-            id
-            name
-            watch_type
-            criteria
-            actions {
-                action_type
-                subject
-                to
-            }
+fdescribe('graphql schema', () => {
+    fit('should be of the correct type', async () => {
+        // will fail if schema is incorrect
+        const MockServer = mockServer(typeDefs);
+        try {
+            await MockServer.query('{ __schema { types { name } } }');
+        } catch (e) {
+            fail(e);
         }
-    }
-`;
+    });
 
-// const MockServer = mockServer(typeDefs);
-// MockServer.query(`{ __schema { types { name } } }`).then(result => console.log(result.data.__schema.types));
-graphql(schema, query).then(result => console.log('Got result', result.data.getRules[0]));
+    fit('get ', async () => {
+        const query = `
+            query getRules {
+                getRules {
+                    id
+                    name
+                    watch_type
+                    criteria
+                    actions {
+                        action_type
+                        subject
+                        to
+                    }
+                }
+            }
+        `;
 
-// test for queries 
+        const result = await graphql(schema, query);
+        console.log(result);
+    });
+    // view rules by date, user, type, reset_criteria, name, with specifiec action properties
+    // create new rule
+    // update rule
+    // delete rule
+});

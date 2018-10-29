@@ -14,7 +14,7 @@ const api = {
     pre: () => {},
 
     routes: () => {
-        require('./lib/routes')(this._config);
+        require('./lib/index')(this._config);
     },
 
     post: () => {}

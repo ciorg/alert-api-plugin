@@ -108,7 +108,7 @@ function killServer() {
 }
 
 describe('alerts-api should allow for users to interact with rule data', () => {
-    startServer();
+    // startServer();
     // afterAll(() => killServer());
     const url = 'http://localhost:3000/api/v1/alerts-graphql';
 
