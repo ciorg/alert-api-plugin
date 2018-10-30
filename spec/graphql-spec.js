@@ -7,7 +7,7 @@ const http = require('http');
 const _ = require('lodash');
 const bodyParser = require('body-parser');
 
-const rules = require('./fixtures/rules');
+const watches = require('./fixtures/watches');
 
 const user = '1';
 let searchQuery;
@@ -18,8 +18,8 @@ function fullESResponse(data) {
     let id = 1;
     const hitsArray = data.map((i) => {
         const esItem = {
-            _index: 'rules-v1',
-            _type: 'rule',
+            _index: 'watches-v1',
+            _type: 'watch',
             _id: id,
             _source: i
         };
@@ -41,14 +41,14 @@ const config = {
     context: {
         sysconfig: {
             teraserver: {
-                connection: 'default'
-            },
-            plugins: {
-                alert_api: {
-                    watch_index: 'watch-v1',
-                    watch_type: 'watch'
+                connection: 'default',
+                plugins: {
+                    alert_api: {
+                        watch_index: 'watches-v1',
+                        watch_type: 'watch'
+                    }
                 }
-            }
+            },
         },
         foundation: {
             getConnection: () => ({
@@ -113,16 +113,16 @@ function killServer() {
     });
 }
 
-xdescribe('alerts-api should allow for users to interact with rule data', () => {
-    // startServer();
-    // afterAll(() => killServer());
+describe('alerts-api should allow for users to interact with rule data', () => {
+    startServer();
+    afterAll(() => killServer());
     const url = 'http://localhost:3000/api/v1/alerts-graphql';
 
-    xit('should return all the logged in users rules', async () => {
-        searchResponse = fullESResponse(rules);
+    it('should return all the logged in users watches', async () => {
+        searchResponse = fullESResponse(watches);
         const requestData = {
-            query: `query getRules {
-                getRules {
+            query: `query getWatch {
+                getWatch {
                     id
                     name
                     watch_type
@@ -139,13 +139,18 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
         };
 
         const result = await got.post(url, options);
-        expect(result.body.data.getRules.length).toBe(4);
+        expect(result.body.data.getWatch.length).toBe(4);
     });
 
-    xit('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
-        searchResponse = fullESResponse(rules);
+    it('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
+        searchResponse = fullESResponse(watches);
         const requestData = {
-            query: `query getRules {getRules(watchType:EXPRESSION) {
+            query: `query getWatch {
+                getWatch(
+                    watchProperties:{
+                        watch_type: EXPRESSION 
+                    }
+                ) {
                     name
                     watch_type
                 }
@@ -160,13 +165,19 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
         expect(searchQuery.q).toEqual('user_id: 1 AND watch_type: EXPRESSION');
     });
 
-    xit('should create proper es search for rules with specific action_types', async () => {
-        searchResponse = fullESResponse(rules);
+    it('should create proper es search for rules with specific action_types', async () => {
+        searchResponse = fullESResponse(watches);
         const requestData = {
-            query: `query getRules {getRules(actionType:EMAIL) {
-                name
-                actions {
-                    action_type }
+            query: `query getWatch {
+                getWatch(
+                    actionProperties: {
+                        action_type: EMAIL
+                    }
+                ) {
+                    name
+                    actions {
+                        action_type
+                    }
                 }
             }`
         };
@@ -179,14 +190,20 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
         expect(searchQuery.q).toEqual('user_id: 1 AND actions.action_type: EMAIL');
     });
 
-    xit('should create search for rules with specific id', async () => {
-        searchResponse = fullESResponse(rules);
+    it('should create search for rules with specific id', async () => {
+        searchResponse = fullESResponse(watches);
         const requestData = {
-            query: `query getRules {getRules(id:1) {
-                name
-                watch_type
-                actions {
-                    action_type }
+            query: `query getWatch {
+                getWatch(
+                    watchProperties: {
+                        id: 1
+                    }
+                ) {
+                    name
+                    watch_type
+                    actions {
+                        action_type
+                    }
                 }
             }`
         };
@@ -199,14 +216,24 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1');
     });
 
-    xit('should create search for rules with many specific limiters', async () => {
-        searchResponse = fullESResponse(rules);
+    it('should create search for watches with many specific limiters', async () => {
+        searchResponse = fullESResponse(watches);
         const requestData = {
-            query: `query getRules {getRules(id:1, watchType:FIELDMATCH, actionType:WEBHOOK) {
-                name
-                watch_type
-                actions {
-                    action_type }
+            query: `query getWatch {
+                getWatch(
+                    watchProperties: {
+                        id: 1
+                        watch_type: FIELDMATCH
+                    }
+                    actionProperties: {
+                        action_type: WEBHOOK
+                    }
+                ) {
+                    name
+                    watch_type
+                    actions {
+                        action_type
+                    }
                 }
             }`
         };
@@ -214,25 +241,30 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
             json: true,
             body: requestData
         };
-
         await got.post(url, options);
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1 AND watch_type: FIELDMATCH AND actions.action_type: WEBHOOK');
     });
 
-    xit('should create new rules for a user', async () => {
+    it('should create new watches for a user', async () => {
         const requestData = {
-            query: `mutation addRule { 
-                addRule (
-                    name: "MyRule",
+            query: `mutation addWatch { 
+                addWatch (
+                    name: "MyWatch",
                     watch_type: EXPRESSION,
-                    spaces: "space1"
-                    criteria: "ip: 1234",
-                    actions: {
-                        action_type: EMAIL
-                        to: ["joe@joe.com", "bob@bob.com"]
-                        from: "joe@joe.com"
-                        subject: "my subject"
+                    spaces: ["space1"]
+                    criteria: "ip: 1234"
+                    alert_cycle: {
+                        alert_every_watch_hit: true
                     }
+                    actions: [
+                        {
+                            action_type: EMAIL
+                            to: ["joe@joe.com", "bob@bob.com"]
+                            from: "joe@joe.com"
+                            subject: "my subject"
+                            message: "this is a message"
+                        }
+                    ]
                 )
                 {
                     id
@@ -245,35 +277,41 @@ xdescribe('alerts-api should allow for users to interact with rule data', () => 
             json: true,
             body: requestData
         };
-        const response = await got.post(url, options);
-        // es index query should reflect whats in the graphql addRull query
-        expect(indexQuery).toEqual({
-            index: 'rules-v1',
-            type: 'rule',
-            id: indexQuery.id,
-            body: {
-                name: 'MyRule',
-                spaces: 'space1',
-                watch_type: 'EXPRESSION',
-                criteria: 'ip: 1234',
-                actions: [
-                    {
-                        action_type: 'EMAIL',
-                        to: ['joe@joe.com', 'bob@bob.com'],
-                        from: 'joe@joe.com',
-                        subject: 'my subject'
-                    }
-                ],
-                user_id: '1',
-                include_record: false,
-                record_fields: []
-            }
-        });
-        // check response
-        expect(response.body.data.addRule).toEqual({
-            id: indexQuery.id,
-            success: true,
-            message: 'New rule was created'
-        });
+        try {
+            const response = await got.post(url, options);
+            // es index query should reflect whats in the graphql addRull query
+            expect(indexQuery).toEqual({
+                index: 'watches-v1',
+                type: 'watch',
+                id: indexQuery.id,
+                body: {
+                    name: 'MyWatch',
+                    spaces: ['space1'],
+                    watch_type: 'EXPRESSION',
+                    criteria: 'ip: 1234',
+                    alert_cycle: {
+                        alert_every_watch_hit: true
+                    },
+                    actions: [
+                        {
+                            action_type: 'EMAIL',
+                            to: ['joe@joe.com', 'bob@bob.com'],
+                            from: 'joe@joe.com',
+                            subject: 'my subject',
+                            message: 'this is a message'
+                        }
+                    ],
+                    user_id: '1'
+                }
+            });
+            // check response
+            expect(response.body.data.addWatch).toEqual({
+                id: indexQuery.id,
+                success: true,
+                message: `New watch with id ${indexQuery.id} was created`
+            });
+        } catch (e) {
+            fail(e);
+        }
     });
 });

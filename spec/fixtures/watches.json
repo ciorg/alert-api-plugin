@@ -1,6 +1,6 @@
 [
     {
-        "name": "rule1",
+        "name": "watch1",
         "user_id": "1",
         "watch_type": "EXPRESSION",
         "criteria": "ip:1.1.1.1 AND domain: yourdomain.com",
@@ -22,7 +22,7 @@
 
     },
     {
-        "name": "rule2",
+        "name": "watch2",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
@@ -44,7 +44,7 @@
 
     },
     {
-        "name": "rule3",
+        "name": "watch3",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
@@ -58,7 +58,7 @@
 
     },
     {
-        "name": "rule4",
+        "name": "watch4",
         "user_id": "1",
         "watch_type": "FIELDMATCH",
         "criteria": "domain: yourdomain.com\ndomain: mydomain",
