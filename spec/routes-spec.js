@@ -16,7 +16,13 @@ const config = {
     context: {
         sysconfig: {
             teraserver: {
-                connection: 'default'
+                connection: 'default',
+                plugins: {
+                    alert_api: {
+                        watch_index: 'watch-v1',
+                        watch_type: 'watch'
+                    }
+                }
             }
         },
         foundation: {
@@ -50,7 +56,7 @@ const config = {
                             found: true,
                             _index: 'rules-v1',
                             _type: 'rule',
-                            _id: query.uuid,
+                            _id: query.id,
                             _version: 3,
                             result: deleteResult,
                             _shards: { total: 2, successful: 1, failed: 0 }
@@ -91,14 +97,14 @@ const ruleFields = {
     },
     actions: [
         {
-            type: 'email',
+            action_type: 'email',
             to: 'you@name.com',
             from: 'me@name.com',
             body: 'more info',
             subject: 'email subject'
         },
         {
-            type: 'webhook',
+            action_type: 'webhook',
             url: 'this.is.the.url.io',
             message: 'this is an alert',
             token: 'thisisatoken'
@@ -124,7 +130,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
     config.app = app;
     require('../lib/routes')(config);
     app.listen(3000);
-    const url = 'http://localhost:3000/api/v1/alerts/rules';
+    const url = 'http://localhost:3000/api/v1/alerts/watch';
 
     it('get alerts/rules should search for rules by user_id', async () => {
         try {
@@ -141,7 +147,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
     it('delete alerts/rules should delete rule by uuid', async () => {
         try {
             const requestData = {
-                uuid: 'u1234'
+                id: 'u1234'
             };
             deleteError = false;
             deleteResult = 'deleted';
@@ -151,7 +157,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
             };
 
             const result = await got.delete(url, options);
-            expect(result.body).toEqual({ message: 'rule u1234 was deleted' });
+            expect(result.body).toEqual({ message: 'Watch u1234 was deleted' });
         } catch (e) {
             fail(e);
         }
@@ -160,7 +166,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
     it('delete alerts/rules should handle if status is not delete', async () => {
         try {
             const requestData = {
-                uuid: 'u1234'
+                id: 'u1234'
             };
             deleteError = false;
             deleteResult = 'not deleted';
@@ -177,7 +183,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
 
     it('delete alerts/rules should handle if uuid is not found', async () => {
         const requestData = {
-            uuid: 'u1234'
+            id: 'u1234'
         };
         deleteError = true;
         const options = {
@@ -193,9 +199,9 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
         }
     });
 
-    it('post alerts/rules should create a new rule', async () => {
+    it('post alerts/watch should create a new watch', async () => {
         const newRule = _.cloneDeep(ruleFields);
-        delete newRule.uuid;
+        delete newRule.id;
         postResult = 'created';
         try {
             const options = {
@@ -204,7 +210,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
             };
 
             const result = await got.post(url, options);
-            expect(result.body).toEqual({ message: 'created new rule' });
+            expect(result.body).toEqual({ message: 'created new watch' });
         } catch (e) {
             fail(e);
         }
@@ -212,7 +218,7 @@ describe('alerts-api should allow for users to interact with api endpoints', () 
 
     it('post alerts/rules should report that rule was not created', async () => {
         const newRule = _.cloneDeep(ruleFields);
-        delete newRule.uuid;
+        delete newRule.id;
         postResult = false;
         try {
             const options = {

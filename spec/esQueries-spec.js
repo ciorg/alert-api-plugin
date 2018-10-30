@@ -10,8 +10,14 @@ let indexQuery;
 const context = {
     sysconfig: {
         teraserver: {
-            connection: 'default'
-        }
+            connection: 'default',
+            plugins: {
+                alert_api: {
+                    watch_index: 'watch-v1',
+                    watch_type: 'watch'
+                }
+            }
+        },
     },
     foundation: {
         getConnection: () => ({
@@ -42,7 +48,7 @@ const esQueries = require('../lib/esQueries')(context);
 describe('esQueries', () => {
     const fields = {
         name: 'rule1',
-        uuid: '1234',
+        id: '1234',
         spaces: 'space1',
         user_id: 'u123',
         criteria: 'name: joe',
@@ -66,30 +72,24 @@ describe('esQueries', () => {
     };
 
     it('should create a proper delete request and return the response', async () => {
-        const index = 'test-v1';
-        const type = 'test';
-        const result = await esQueries.deleteRecord(index, type, fields);
+        const result = await esQueries.deleteWatch('1234');
         expect(result).toBe('delete endpoint');
-        expect(deleteQuery).toEqual({ index: 'test-v1', type: 'test', id: '1234' });
+        expect(deleteQuery).toEqual({ index: 'watch-v1', type: 'watch', id: '1234' });
     });
 
     it('should create a proper search request and return the response', async () => {
-        const index = 'test-v1';
-        const type = 'test';
         const terms = 'name: big_rule';
-        const result = await esQueries.search(index, type, terms);
+        const result = await esQueries.search(terms);
         expect(result).toBe('search endpoint');
-        expect(searchQuery).toEqual({ index: 'test-v1', type: 'test', q: 'name: big_rule' });
+        expect(searchQuery).toEqual({ index: 'watch-v1', type: 'watch', q: 'name: big_rule' });
     });
 
     it('should create a proper update request and return the response', async () => {
-        const index = 'test-v1';
-        const type = 'test';
-        const result = await esQueries.updateRule(index, type, fields);
+        const result = await esQueries.updateWatch(fields);
         expect(result).toBe('update endpoint');
         expect(updateQuery).toEqual({
-            index: 'test-v1',
-            type: 'test',
+            index: 'watch-v1',
+            type: 'watch',
             id: '1234',
             body: {
                 doc: fields
@@ -98,20 +98,17 @@ describe('esQueries', () => {
     });
 
     it('should create a proper index request and return the response', async () => {
-        const index = 'test-v1';
-        const type = 'test';
         const newFields = _.cloneDeep(fields);
-        // removed uuid from fields
-        delete newFields.uuid;
-        const result = await esQueries.newRule(index, type, newFields);
+        // removed id from fields
+        delete newFields.id;
+        const result = await esQueries.newWatch(newFields);
         expect(result).toBe('index endpoint');
         // need to adjust for a new uuid
         const newUuid = indexQuery.id;
         newFields.uuid = newUuid;
-        expect(indexQuery.body.uuid).toBeDefined();
         expect(indexQuery).toEqual({
-            index: 'test-v1',
-            type: 'test',
+            index: 'watch-v1',
+            type: 'watch',
             id: newUuid,
             body: newFields
         });

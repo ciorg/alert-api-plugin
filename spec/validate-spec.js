@@ -8,8 +8,14 @@ let searchResult;
 const context = {
     sysconfig: {
         teraserver: {
-            connection: 'default'
-        }
+            connection: 'default',
+            plugins: {
+                alert_api: {
+                    watch_index: 'watch-v1',
+                    watch_type: 'watch'
+                }
+            }
+        },
     },
     foundation: {
         getConnection: () => ({
@@ -30,9 +36,9 @@ const logger = {
 const validate = require('../lib/validate')(context, logger);
 
 const fields = {
-    name: 'rule1',
+    name: 'watch1',
     uuid: '1234',
-    watch_type: 'expression',
+    watch_type: 'EXPRESSION',
     spaces: 'space1',
     user_id: 'u123',
     criteria: 'name: joe',
@@ -46,14 +52,14 @@ const fields = {
     },
     actions: [
         {
-            type: 'email',
+            action_type: 'email',
             to: 'you@name.com',
             from: 'me@name.com',
             body: 'more info',
             subject: 'email subject'
         },
         {
-            type: 'webhook',
+            action_type: 'webhook',
             url: 'this.is.the.url.io',
             message: 'this is an alert',
             token: 'thisisatoken'
@@ -68,7 +74,7 @@ describe('validate', () => {
                 total: 0
             }
         };
-        const result = await validate._uniqField('test-v1', 'test', 'name', 'rule1');
+        const result = await validate._uniqField('name', 'watch1');
         expect(result).toBe(true);
     });
 
@@ -78,7 +84,7 @@ describe('validate', () => {
                 total: 23
             }
         };
-        const result = await validate._uniqField('test-v1', 'test', 'name', 'rule1');
+        const result = await validate._uniqField('name', 'watch1');
         expect(result).toBe(false);
     });
 
@@ -89,12 +95,12 @@ describe('validate', () => {
             }
         };
         searchError = true;
-        const result = await validate._uniqField('test-v1', 'test', 'name', 'rule1');
+        const result = await validate._uniqField('name', 'watch1');
         expect(result).toBe('this is an error');
         searchError = false;
     });
 
-    it('should validate that all fields are present for a rule to be valid', async () => {
+    it('should validate that all fields are present for a watch to be valid', async () => {
         searchResult = {
             hits: {
                 total: 0
@@ -102,7 +108,7 @@ describe('validate', () => {
         };
 
         try {
-            const result = await validate.validateRule(fields, true);
+            const result = await validate.validateWatch(fields, true);
             expect(result.isValid).toBe(true);
             expect(result.invalidReasons.length).toBe(0);
         } catch (e) {
@@ -110,7 +116,7 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if name is not defined', async () => {
+    it('should mark watch invalid if name is not defined', async () => {
         searchResult = {
             hits: {
                 total: 0
@@ -121,16 +127,16 @@ describe('validate', () => {
         delete testFields.name;
 
         try {
-            const result = await validate.validateRule(testFields, true);
+            const result = await validate.validateWatch(testFields, true);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('Rule name is missing');
+            expect(result.invalidReasons[0]).toBe('Watch name is missing');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if spaces is not definded', async () => {
+    it('should mark watch invalid if spaces is not definded', async () => {
         searchResult = {
             hits: {
                 total: 0
@@ -141,16 +147,16 @@ describe('validate', () => {
         delete testFields.spaces;
 
         try {
-            const result = await validate.validateRule(testFields, true);
+            const result = await validate.validateWatch(testFields, true);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('Please assign a space to the rule');
+            expect(result.invalidReasons[0]).toBe('Please assign a space to the watch');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if name is not uniq or undefined', async () => {
+    it('should mark watch invalid if name is not uniq or undefined', async () => {
         searchResult = {
             hits: {
                 total: 3
@@ -160,34 +166,34 @@ describe('validate', () => {
         const testFields = _.cloneDeep(fields);
 
         try {
-            const result = await validate.validateRule(testFields, true);
+            const result = await validate.validateWatch(testFields, true);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('New rule name has already been used');
+            expect(result.invalidReasons[0]).toBe('New watch name has already been used');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if watch_type is not geo, expression, or field', async () => {
+    it('should mark watch invalid if watch_type is not geo, expression, or field', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.watch_type = 'bluewhale';
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('watch_type must be field, geo, or expression');
+            expect(result.invalidReasons[0]).toBe('watch_type must be fieldmatch, geo, or expression');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if criteria is missing', async () => {
+    it('should mark watch invalid if criteria is missing', async () => {
         const testFields = _.cloneDeep(fields);
         delete testFields.criteria;
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('criteria must exist and be a string');
@@ -196,11 +202,11 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if criteria is wrong format', async () => {
+    it('should mark watch invalid if criteria is wrong format', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.criteria = true;
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('criteria must exist and be a string');
@@ -209,11 +215,11 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if include record is wrong format', async () => {
+    it('should mark watch invalid if include record is wrong format', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.include_record = 'true';
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('include_record should be true or false');
@@ -222,14 +228,14 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if include record is wrong format', async () => {
+    it('should mark watch invalid if include record is wrong format', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.record_fields = {
             field1: 'someField'
         };
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('record_fields should be an array of fields');
@@ -238,7 +244,7 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if reset_criteria does not have all the properties', async () => {
+    it('should mark watch invalid if reset_criteria does not have all the properties', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.reset_criteria = {
             alert_count: 5,
@@ -246,7 +252,7 @@ describe('validate', () => {
         };
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('alert reset should have alert_count, reset_count, reset_units');
@@ -255,46 +261,46 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if actions are missing or no actions', async () => {
+    it('should mark watch invalid if actions are missing or no actions', async () => {
         const testFields = _.cloneDeep(fields);
         delete testFields.actions;
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('the rule must have actions');
+            expect(result.invalidReasons[0]).toBe('Watch must have actions');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if actions are missing or no actions', async () => {
+    it('should mark watch invalid if actions are missing or no actions', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.actions = [];
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
-            expect(result.invalidReasons[0]).toBe('the rule must have actions');
+            expect(result.invalidReasons[0]).toBe('Watch must have actions');
         } catch (e) {
             fail(e);
         }
     });
 
-    it('should mark rule invalid if emails actions are missing key properties', async () => {
+    it('should mark watch invalid if emails actions are missing key properties', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.actions = [
             {
-                type: 'email',
+                action_type: 'email',
                 from: 'me@name.com',
                 body: 'more info',
             }
         ];
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(2);
             expect(result.invalidReasons[0]).toBe('the email action\'s subject, to, or from field is missing');
@@ -304,11 +310,11 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if emails actions to and from addresses are a bad format', async () => {
+    it('should mark watch invalid if emails actions to and from addresses are a bad format', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.actions = [
             {
-                type: 'email',
+                action_type: 'email',
                 from: 'myemailasdfqewopf',
                 to: ['go@go.com@go.com', 'bob@bob.com'],
                 body: 'more info',
@@ -317,7 +323,7 @@ describe('validate', () => {
         ];
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('email from and to addresses must have a valid format');
@@ -330,7 +336,7 @@ describe('validate', () => {
         const testFields = _.cloneDeep(fields);
         testFields.actions = [
             {
-                type: 'email',
+                action_type: 'email',
                 from: 'me@me.com',
                 to: ['roy@go.com', 'bob@bob.com', 'clem@go.com'],
                 body: 'more info',
@@ -339,7 +345,7 @@ describe('validate', () => {
         ];
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(true);
             expect(result.invalidReasons.length).toBe(0);
         } catch (e) {
@@ -347,18 +353,18 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid if webhook action is missing key properties', async () => {
+    it('should mark watch invalid if webhook action is missing key properties', async () => {
         const testFields = _.cloneDeep(fields);
         testFields.actions = [
             {
-                type: 'webhook',
+                action_type: 'webhook',
                 url: 'this.is.the.url.io',
                 message: 'this is an alert'
             }
         ];
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(1);
             expect(result.invalidReasons[0]).toBe('webhook url, token, and message must be defined');
@@ -367,7 +373,7 @@ describe('validate', () => {
         }
     });
 
-    it('should mark rule invalid for many reasons', async () => {
+    it('should mark watch invalid for many reasons', async () => {
         const testFields = _.cloneDeep(fields);
         delete testFields.name;
         delete testFields.spaces;
@@ -378,7 +384,7 @@ describe('validate', () => {
         delete testFields.actions[1].url;
 
         try {
-            const result = await validate.validateRule(testFields);
+            const result = await validate.validateWatch(testFields);
             expect(result.isValid).toBe(false);
             expect(result.invalidReasons.length).toBe(8);
         } catch (e) {

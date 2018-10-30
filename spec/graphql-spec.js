@@ -42,6 +42,12 @@ const config = {
         sysconfig: {
             teraserver: {
                 connection: 'default'
+            },
+            plugins: {
+                alert_api: {
+                    watch_index: 'watch-v1',
+                    watch_type: 'watch'
+                }
             }
         },
         foundation: {
@@ -107,12 +113,12 @@ function killServer() {
     });
 }
 
-describe('alerts-api should allow for users to interact with rule data', () => {
+xdescribe('alerts-api should allow for users to interact with rule data', () => {
     // startServer();
     // afterAll(() => killServer());
     const url = 'http://localhost:3000/api/v1/alerts-graphql';
 
-    it('should return all the logged in users rules', async () => {
+    xit('should return all the logged in users rules', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
             query: `query getRules {
@@ -136,7 +142,7 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(result.body.data.getRules.length).toBe(4);
     });
 
-    it('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
+    xit('should create a proper es search for rules with watch_type: EXPRESSION', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
             query: `query getRules {getRules(watchType:EXPRESSION) {
@@ -154,7 +160,7 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND watch_type: EXPRESSION');
     });
 
-    it('should create proper es search for rules with specific action_types', async () => {
+    xit('should create proper es search for rules with specific action_types', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
             query: `query getRules {getRules(actionType:EMAIL) {
@@ -173,7 +179,7 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND actions.action_type: EMAIL');
     });
 
-    it('should create search for rules with specific id', async () => {
+    xit('should create search for rules with specific id', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
             query: `query getRules {getRules(id:1) {
@@ -193,7 +199,7 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1');
     });
 
-    it('should create search for rules with many specific limiters', async () => {
+    xit('should create search for rules with many specific limiters', async () => {
         searchResponse = fullESResponse(rules);
         const requestData = {
             query: `query getRules {getRules(id:1, watchType:FIELDMATCH, actionType:WEBHOOK) {
@@ -213,7 +219,7 @@ describe('alerts-api should allow for users to interact with rule data', () => {
         expect(searchQuery.q).toEqual('user_id: 1 AND _id: 1 AND watch_type: FIELDMATCH AND actions.action_type: WEBHOOK');
     });
 
-    it('should create new rules for a user', async () => {
+    xit('should create new rules for a user', async () => {
         const requestData = {
             query: `mutation addRule { 
                 addRule (

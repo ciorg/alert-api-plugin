@@ -18,6 +18,12 @@ const config = {
         sysconfig: {
             teraserver: {
                 connection: 'default'
+            },
+            plugins: {
+                alert_api: {
+                    watch_index: 'watch-v1',
+                    watch_type: 'watch'
+                }
             }
         },
         foundation: {

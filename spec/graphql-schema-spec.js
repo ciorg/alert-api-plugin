@@ -10,9 +10,11 @@ const { graphql } = require('graphql');
 const uuid = require('uuid/v4');
 
 const typeDefs = require('../lib/schema');
+const resolvers = require('../lib/resolvers');
 
 const schema = makeExecutableSchema({
-    typeDefs
+    typeDefs,
+    typeResolvers: resolvers
 });
 
 const newId = uuid();
@@ -57,8 +59,8 @@ addMockFunctionsToSchema({
     }
 });
 
-fdescribe('graphql schema', () => {
-    fit('should be of the correct type', async () => {
+describe('graphql schema', () => {
+    it('should be of the correct type', async () => {
         // will fail if schema has type errors
         const MockServer = mockServer(typeDefs);
         try {
@@ -68,7 +70,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('getWatchs should return all properties of a Watch', async () => {
+    it('getWatchs should return all properties of a Watch', async () => {
         const query = `
             query getWatch {
                 getWatch {
@@ -132,7 +134,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('query getWatch should accept watchProperties and actionProperties arguments', async () => {
+    it('query getWatch should accept watchProperties and actionProperties arguments', async () => {
         const query = `
             query getWatch {
                 getWatch (
@@ -195,7 +197,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('should accept addWatch mutatation query', async () => {
+    it('should accept addWatch mutatation query', async () => {
         const query = `
             mutation addWatch {
                 addWatch(
@@ -248,7 +250,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('should accept deleteWatch mutation query', async () => {
+    it('should accept deleteWatch mutation query', async () => {
         const query = `
             mutation deleteWatch {
                 deleteWatch(
@@ -270,7 +272,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('should accept editWath mutation query', async () => {
+    it('should accept editWath mutation query', async () => {
         const query = `
             mutation editWatch {
                 editWatch(
