@@ -35,17 +35,21 @@ addMockFunctionsToSchema({
             criteria: () => 'ip: 1234 AND name: whogoesthere',
             include_record: () => true,
             record_fields: () => ['name', 'ip'],
-            actions: () => new MockList(2)
+            actions: () => new MockList(4)
         }),
-        Action: () => ({
+        Webhook: () => ({
+            action_type: 'WEBHOOK',
+            message: 'this is an alert',
+            url: 'send.io/alert/here',
+            token: 'supersecretToken'
+        }),
+        Email: () => ({
             action_type: 'EMAIL',
             message: 'this is an alert',
             subject: 'This is a subject',
             to: ['joe@joe.com', 'bob@joe.com'],
             from: 'alert@alerts.com',
-            ffrom: 'serious alert',
-            url: 'send.io/alert/here',
-            token: 'supersecretToken'
+            ffrom: 'serious alert'
         }),
         AlertCycle: () => ({
             alert_every_watch_hit: () => false,
@@ -59,8 +63,22 @@ addMockFunctionsToSchema({
     }
 });
 
-describe('graphql schema', () => {
-    it('should be of the correct type', async () => {
+fdescribe('graphql schema', () => {
+    function checkEmail(action) {
+        expect(action.action_type).toBe('EMAIL');
+        expect(action.message).toBe('this is an alert');
+        expect(action.subject).toBe('This is a subject');
+        expect(action.from).toBe('alert@alerts.com');
+        expect(action.to).toEqual(['joe@joe.com', 'bob@joe.com']);
+        expect(action.ffrom).toBe('serious alert');
+    }
+
+    function checkWebhook(action) {
+        expect(action.url).toBe('send.io/alert/here');
+        expect(action.token).toBe('supersecretToken');
+    }
+
+    fit('should be of the correct type', async () => {
         // will fail if schema has type errors
         const MockServer = mockServer(typeDefs);
         try {
@@ -70,7 +88,7 @@ describe('graphql schema', () => {
         }
     });
 
-    it('getWatchs should return all properties of a Watch', async () => {
+    fit('getWatchs should return all properties of a Watch', async () => {
         const query = `
             query getWatch {
                 getWatch {
@@ -90,13 +108,17 @@ describe('graphql schema', () => {
                     actions {
                         action_type
                         message
-                        subject
-                        to
-                        bcc
-                        from
-                        ffrom
-                        token
-                        url
+                        ... on Email {
+                            subject
+                            to
+                            bcc
+                            from
+                            ffrom
+                        }
+                        ... on Webhook {
+                            token
+                            url
+                        }
                     }
                 }
             }
@@ -105,6 +127,7 @@ describe('graphql schema', () => {
         try {
             const result = await graphql(schema, query);
             // all fields shoule be defined and have legit values
+            // console.log(result.data.getWatch);
             const returnData = result.data.getWatch[0];
             expect(returnData.id).toBe(newId);
             expect(returnData.name).toBe('testWatch');
@@ -120,15 +143,16 @@ describe('graphql schema', () => {
             expect(alertCycle.time_units).toBe('MINUTES');
             // actions properties
             const { actions } = returnData;
-            expect(actions.length).toBe(2);
-            expect(actions[0].action_type).toBe('EMAIL');
-            expect(actions[0].message).toBe('this is an alert');
-            expect(actions[0].subject).toBe('This is a subject');
-            expect(actions[0].from).toBe('alert@alerts.com');
-            expect(actions[0].to).toEqual(['joe@joe.com', 'bob@joe.com']);
-            expect(actions[0].ffrom).toBe('serious alert');
-            expect(actions[0].url).toBe('send.io/alert/here');
-            expect(actions[0].token).toBe('supersecretToken');
+            expect(actions.length).toBe(4);
+            actions.forEach((action) => {
+                if (action.action_type === 'EMAIL') {
+                    checkEmail(action);
+                } else if (action.action_type === 'WEBHOOK') {
+                    checkWebhook(action);
+                } else {
+                    fail('bad action_type');
+                }
+            });
         } catch (e) {
             fail(e);
         }
