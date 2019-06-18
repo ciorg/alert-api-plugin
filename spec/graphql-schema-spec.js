@@ -63,7 +63,7 @@ addMockFunctionsToSchema({
     }
 });
 
-fdescribe('graphql schema', () => {
+describe('graphql schema', () => {
     function checkEmail(action) {
         expect(action.action_type).toBe('EMAIL');
         expect(action.message).toBe('this is an alert');
@@ -78,7 +78,7 @@ fdescribe('graphql schema', () => {
         expect(action.token).toBe('supersecretToken');
     }
 
-    fit('should be of the correct type', async () => {
+    it('should be of the correct type', async () => {
         // will fail if schema has type errors
         const MockServer = mockServer(typeDefs);
         try {
@@ -88,7 +88,7 @@ fdescribe('graphql schema', () => {
         }
     });
 
-    fit('getWatchs should return all properties of a Watch', async () => {
+    it('getWatchs should return all properties of a Watch', async () => {
         const query = `
             query getWatch {
                 getWatch {

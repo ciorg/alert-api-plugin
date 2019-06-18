@@ -112,7 +112,7 @@ const ruleFields = {
     ]
 };
 
-xdescribe('alerts-api should allow for users to interact with api endpoints', () => {
+describe('alerts-api should allow for users to interact with api endpoints', () => {
     beforeEach(() => {
         // originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;

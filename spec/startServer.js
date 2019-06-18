@@ -17,14 +17,14 @@ const config = {
     context: {
         sysconfig: {
             teraserver: {
-                connection: 'default'
-            },
-            plugins: {
-                alert_api: {
-                    watch_index: 'watch-v1',
-                    watch_type: 'watch'
+                connection: 'default',
+                plugins: {
+                    alert_api: {
+                        watch_index: 'watch-v1',
+                        watch_type: 'watch'
+                    }
                 }
-            }
+            },
         },
         foundation: {
             getConnection: () => ({
@@ -44,8 +44,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(addUserId);
 config.app = app;
+
 // add graphql middleware
 require('../lib')(config);
+
 // start server with http to enble the kill switch
 const server = http.createServer(app);
 server.listen(3000, () => console.log('server is up on 3000'));
