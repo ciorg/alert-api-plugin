@@ -6,7 +6,8 @@
   "author": "ciorg@terascope.io",
   "private": true,
   "scripts": {
-    "test": "nyc -x spec/ --reporter=text-summary jasmine spec/**/*spec.js && nyc report --reporter=html"
+    "test": "nyc -x spec/ --reporter=text-summary jasmine spec/**/*spec.js && nyc report --reporter=html",
+    "start": "node ./spec/startServer.js"
   },
   "nyc": {
     "cache": true,
